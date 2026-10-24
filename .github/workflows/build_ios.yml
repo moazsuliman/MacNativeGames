@@ -1,19 +1,19 @@
-name: Build TOTK iOS App (NSP + Update + Mod)
+name: Build TOTK iOS App (Google Drive Inputs)
 
 on:
   workflow_dispatch:
     inputs:
       keys_url:
-        description: 'Direct Link to prod.keys'
+        description: 'Google Drive Link or File ID for prod.keys'
         required: true
       base_game_url:
-        description: 'Direct Link to Base Game NSP'
+        description: 'Google Drive Link or File ID for Base Game NSP'
         required: true
       update_url:
-        description: 'Direct Link to Update NSP'
+        description: 'Google Drive Link or File ID for Update NSP'
         required: true
       mod_url:
-        description: 'Direct Link to depths_of_the_kingdom_20_-_public.zip'
+        description: 'Google Drive Link or File ID for depths_of_the_kingdom_20_-_public.zip'
         required: false
 
 jobs:
@@ -35,24 +35,25 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install macOS Dependencies
+      - name: Install macOS Dependencies & gdown
         run: |
           brew install opus libvpx xcodegen cmake ninja || true
+          pip install --upgrade gdown
 
-      - name: Download Files
+      - name: Download Files from Google Drive
         run: |
           echo "Downloading prod.keys..."
-          curl -L -A "Mozilla/5.0" --retry 5 "${{ github.event.inputs.keys_url }}" -o prod.keys
+          gdown --fuzzy "${{ github.event.inputs.keys_url }}" -O prod.keys
           
           echo "Downloading Base Game NSP..."
-          curl -L -A "Mozilla/5.0" --retry 5 "${{ github.event.inputs.base_game_url }}" -o base.nsp
+          gdown --fuzzy "${{ github.event.inputs.base_game_url }}" -O base.nsp
           
           echo "Downloading Update NSP..."
-          curl -L -A "Mozilla/5.0" --retry 5 "${{ github.event.inputs.update_url }}" -o update.nsp
+          gdown --fuzzy "${{ github.event.inputs.update_url }}" -O update.nsp
           
           if [ -n "${{ github.event.inputs.mod_url }}" ]; then
             echo "Downloading Mod Archive..."
-            curl -L -A "Mozilla/5.0" --retry 5 "${{ github.event.inputs.mod_url }}" -o mod_input.zip
+            gdown --fuzzy "${{ github.event.inputs.mod_url }}" -O mod_input.zip
             unzip -q mod_input.zip -d mod_raw || true
             python3 -c "
             import zipfile, glob, os
