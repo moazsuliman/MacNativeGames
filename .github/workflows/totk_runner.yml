@@ -8,13 +8,13 @@ on:
     inputs:
       keys_url:
         description: 'Google Drive Link or File ID for prod.keys'
-        required: true
+        required: false
       base_game_url:
         description: 'Google Drive Link or File ID for Base Game NSP'
-        required: true
+        required: false
       update_url:
         description: 'Google Drive Link or File ID for Update NSP'
-        required: true
+        required: false
       mod_url:
         description: 'Google Drive Link or File ID for depths_of_the_kingdom_20_-_public.zip'
         required: false
@@ -45,18 +45,28 @@ jobs:
 
       - name: Download Files from Google Drive
         run: |
+          KEYS="${{ github.event.inputs.keys_url }}"
+          BASE="${{ github.event.inputs.base_game_url }}"
+          UPDATE="${{ github.event.inputs.update_url }}"
+          MOD="${{ github.event.inputs.mod_url }}"
+
+          if [ -z "$KEYS" ]; then
+            echo "No manual inputs provided. Skipping automatic push run."
+            exit 0
+          fi
+
           echo "Downloading prod.keys..."
-          gdown "${{ github.event.inputs.keys_url }}" -O prod.keys || true
+          gdown "$KEYS" -O prod.keys
           
           echo "Downloading Base Game NSP..."
-          gdown "${{ github.event.inputs.base_game_url }}" -O base.nsp || true
+          gdown "$BASE" -O base.nsp
           
           echo "Downloading Update NSP..."
-          gdown "${{ github.event.inputs.update_url }}" -O update.nsp || true
+          gdown "$UPDATE" -O update.nsp
           
-          if [ -n "${{ github.event.inputs.mod_url }}" ]; then
+          if [ -n "$MOD" ]; then
             echo "Downloading Mod..."
-            gdown "${{ github.event.inputs.mod_url }}" -O mod_input.zip || true
+            gdown "$MOD" -O mod_input.zip
             unzip -o mod_input.zip -d mod_raw || true
             python3 -c "import zipfile, glob, os
 tkcl_files = glob.glob('mod_raw/*.tkcl')
@@ -68,6 +78,11 @@ if tkcl_files:
 
       - name: Build iOS App
         run: |
+          if [ ! -f "base.nsp" ]; then
+            echo "No base game downloaded. Skipping build."
+            exit 0
+          fi
+
           if [ -d "extracted_mod" ]; then
             python3 build_app.py base.nsp -k prod.keys --update update.nsp --mod extracted_mod --target ios
           else
