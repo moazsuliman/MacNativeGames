@@ -28,20 +28,23 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Free disk space
+      - name: Maximize macOS Runner Disk Space
         run: |
-          sudo rm -rf /Applications/Xcode_*.app || true
-          sudo rm -rf /Library/Developer/CoreSimulator || true
+          echo "=== Freeing Disk Space ==="
+          df -h
+          sudo rm -rf /Applications/Xcode*.app || true
+          sudo rm -rf /Library/Developer/CommandLineTools || true
+          sudo rm -rf /Users/runner/Library/Android || true
+          sudo rm -rf /opt/homebrew || true
+          echo "=== Disk Space After Cleanup ==="
+          df -h
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
+      - name: Reinstall Minimal Homebrew & Python
         run: |
-          brew install opus libvpx xcodegen cmake ninja || true
-          pip install --upgrade gdown
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || true
+          echo "/opt/homebrew/bin" >> $GITHUB_PATH
+          brew install opus libvpx xcodegen cmake ninja python@3.11 || true
+          pip3 install --upgrade gdown
 
       - name: Download Google Drive files
         run: |
