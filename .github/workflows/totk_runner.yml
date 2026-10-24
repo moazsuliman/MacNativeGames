@@ -1,20 +1,17 @@
-name: TOTK Builder App
+name: Build TOTK iOS App
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
     inputs:
       keys_url:
         description: 'Google Drive Link or File ID for prod.keys'
-        required: false
+        required: true
       base_game_url:
         description: 'Google Drive Link or File ID for Base Game NSP'
-        required: false
+        required: true
       update_url:
         description: 'Google Drive Link or File ID for Update NSP'
-        required: false
+        required: true
       mod_url:
         description: 'Google Drive Link or File ID for depths_of_the_kingdom_20_-_public.zip'
         required: false
@@ -25,16 +22,15 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Free Disk Space
         run: |
-          echo "Freeing disk space..."
           sudo rm -rf /Applications/Xcode_*.app || true
           sudo rm -rf /Library/Developer/CoreSimulator || true
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -45,28 +41,18 @@ jobs:
 
       - name: Download Files from Google Drive
         run: |
-          KEYS="${{ github.event.inputs.keys_url }}"
-          BASE="${{ github.event.inputs.base_game_url }}"
-          UPDATE="${{ github.event.inputs.update_url }}"
-          MOD="${{ github.event.inputs.mod_url }}"
-
-          if [ -z "$KEYS" ]; then
-            echo "No manual inputs provided on push commit. Skipping download step."
-            exit 0
-          fi
-
           echo "Downloading prod.keys..."
-          gdown "$KEYS" -O prod.keys
+          gdown "${{ inputs.keys_url }}" -O prod.keys
           
           echo "Downloading Base Game NSP..."
-          gdown "$BASE" -O base.nsp
+          gdown "${{ inputs.base_game_url }}" -O base.nsp
           
           echo "Downloading Update NSP..."
-          gdown "$UPDATE" -O update.nsp
+          gdown "${{ inputs.update_url }}" -O update.nsp
           
-          if [ -n "$MOD" ]; then
+          if [ -n "${{ inputs.mod_url }}" ]; then
             echo "Downloading Mod..."
-            gdown "$MOD" -O mod_input.zip
+            gdown "${{ inputs.mod_url }}" -O mod_input.zip
             unzip -o mod_input.zip -d mod_raw || true
             python3 -c "import zipfile, glob, os
 tkcl_files = glob.glob('mod_raw/*.tkcl')
@@ -78,11 +64,6 @@ if tkcl_files:
 
       - name: Build iOS App
         run: |
-          if [ ! -f "base.nsp" ]; then
-            echo "No base game present. Skipping build."
-            exit 0
-          fi
-
           if [ -d "extracted_mod" ]; then
             python3 build_app.py base.nsp -k prod.keys --update update.nsp --mod extracted_mod --target ios
           else
