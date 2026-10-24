@@ -1,4 +1,4 @@
-name: Build TOTK iOS App
+name: Build TOTK App Direct
 
 on:
   push:
