@@ -62,9 +62,9 @@ jobs:
       - name: Build iOS App
         run: |
           if [ -d "extracted_mod" ] && [ "$(ls -A extracted_mod)" ]; then
-            python3 build_app.py base.nsp -k prod.keys --update update.nsp --mod extracted_mod --target ios
+            python3 build_app.py base.nsp -k prod.keys --update update.nsp --mod extracted_mod --platform ios -o TearsOfTheKingdom.ipa
           else
-            python3 build_app.py base.nsp -k prod.keys --update update.nsp --target ios
+            python3 build_app.py base.nsp -k prod.keys --update update.nsp --platform ios -o TearsOfTheKingdom.ipa
           fi
 
       - name: Upload Finished IPA
