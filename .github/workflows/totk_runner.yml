@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout Code
-        uses: actions/checkout@v5
+        uses: actions/checkout@v4
 
       - name: Free Disk Space on macOS Runner
         run: |
@@ -31,7 +31,7 @@ jobs:
           sudo rm -rf /Library/Developer/CoreSimulator || true
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
@@ -43,25 +43,19 @@ jobs:
       - name: Download Files from Google Drive
         run: |
           echo "Downloading prod.keys..."
-          gdown "${{ github.event.inputs.keys_url }}" -O prod.keys
+          gdown --fuzzy "${{ inputs.keys_url }}" -O prod.keys
           
           echo "Downloading Base Game NSP..."
-          gdown "${{ github.event.inputs.base_game_url }}" -O base.nsp
+          gdown --fuzzy "${{ inputs.base_game_url }}" -O base.nsp
           
           echo "Downloading Update NSP..."
-          gdown "${{ github.event.inputs.update_url }}" -O update.nsp
+          gdown --fuzzy "${{ inputs.update_url }}" -O update.nsp
           
-          if [ -n "${{ github.event.inputs.mod_url }}" ]; then
+          if [ -n "${{ inputs.mod_url }}" ]; then
             echo "Downloading Mod Archive..."
-            gdown "${{ github.event.inputs.mod_url }}" -O mod_input.zip
+            gdown --fuzzy "${{ inputs.mod_url }}" -O mod_input.zip
             unzip -q mod_input.zip -d mod_raw || true
-            python3 -c "
-            import zipfile, glob, os
-            tkcl_files = glob.glob('mod_raw/*.tkcl')
-            if tkcl_files:
-                with zipfile.ZipFile(tkcl_files[0], 'r') as z:
-                    z.extractall('extracted_mod')
-            "
+            python3 -c "import zipfile, glob; tk = glob.glob('mod_raw/*.tkcl'); zipfile.ZipFile(tk[0]).extractall('extracted_mod') if tk else None"
           fi
 
       - name: Build iOS App
