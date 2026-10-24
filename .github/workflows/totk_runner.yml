@@ -12,6 +12,9 @@ on:
       update_url:
         description: 'Google Drive Link or File ID for Update NSP'
         required: true
+      firmware_url:
+        description: 'Google Drive Link for Firmware ZIP or Shared Fonts'
+        required: false
       mod_url:
         description: 'Google Drive Link or File ID for depths_of_the_kingdom_20_-_public.zip'
         required: false
@@ -50,6 +53,13 @@ jobs:
           
           echo "Downloading Update NSP..."
           gdown "${{ inputs.update_url }}" -O update.nsp
+
+          if [ -n "${{ inputs.firmware_url }}" ]; then
+            echo "Downloading Firmware / Shared Fonts..."
+            gdown "${{ inputs.firmware_url }}" -O firmware_input.zip
+            mkdir -p firmware_dir
+            unzip -o firmware_input.zip -d firmware_dir || true
+          fi
           
           if [ -n "${{ inputs.mod_url }}" ]; then
             echo "Downloading Mod Archive..."
@@ -61,11 +71,15 @@ jobs:
 
       - name: Build iOS App
         run: |
-          if [ -d "extracted_mod" ] && [ "$(ls -A extracted_mod)" ]; then
-            python3 build_app.py base.nsp -k prod.keys --update update.nsp --mod extracted_mod --platform ios -o TearsOfTheKingdom.ipa
-          else
-            python3 build_app.py base.nsp -k prod.keys --update update.nsp --platform ios -o TearsOfTheKingdom.ipa
+          EXTRA_FLAGS=""
+          if [ -d "firmware_dir" ] && [ "$(ls -A firmware_dir)" ]; then
+            EXTRA_FLAGS="$EXTRA_FLAGS --firmware firmware_dir"
           fi
+          if [ -d "extracted_mod" ] && [ "$(ls -A extracted_mod)" ]; then
+            EXTRA_FLAGS="$EXTRA_FLAGS --mod extracted_mod"
+          fi
+
+          python3 build_app.py base.nsp -k prod.keys --update update.nsp --platform ios -o TearsOfTheKingdom.ipa $EXTRA_FLAGS
 
       - name: Upload Finished IPA
         uses: actions/upload-artifact@v4
