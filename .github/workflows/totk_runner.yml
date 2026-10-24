@@ -46,27 +46,38 @@ jobs:
       - name: Download Files from Google Drive
         run: |
           echo "Downloading prod.keys..."
-          gdown "${{ inputs.keys_url }}" -O prod.keys
+          gdown --fuzzy "${{ inputs.keys_url }}" -O prod.keys
           
           echo "Downloading Base Game NSP..."
-          gdown "${{ inputs.base_game_url }}" -O base.nsp
+          gdown --fuzzy --remaining-ok "${{ inputs.base_game_url }}" -O base.nsp
           
           echo "Downloading Update NSP..."
-          gdown "${{ inputs.update_url }}" -O update.nsp
+          gdown --fuzzy --remaining-ok "${{ inputs.update_url }}" -O update.nsp
 
           if [ -n "${{ inputs.firmware_url }}" ]; then
             echo "Downloading Firmware / Shared Fonts..."
-            gdown "${{ inputs.firmware_url }}" -O firmware_input.zip
+            gdown --fuzzy "${{ inputs.firmware_url }}" -O firmware_input.zip
             mkdir -p firmware_dir
             unzip -o firmware_input.zip -d firmware_dir || true
           fi
           
           if [ -n "${{ inputs.mod_url }}" ]; then
             echo "Downloading Mod Archive..."
-            gdown "${{ inputs.mod_url }}" -O mod_input.zip
+            gdown --fuzzy "${{ inputs.mod_url }}" -O mod_input.zip
             unzip -q mod_input.zip -d mod_raw || true
             mkdir -p extracted_mod
             find mod_raw -name "*.tkcl" -exec unzip -o {} -d extracted_mod/ \; || true
+          fi
+
+      - name: Verify Base NSP File Size
+        run: |
+          echo "Checking downloaded NSP size..."
+          ls -lh base.nsp
+          SIZE=$(wc -c < base.nsp)
+          if [ "$SIZE" -lt 1000000000 ]; then
+            echo "ERROR: base.nsp is smaller than 1 GB ($SIZE bytes). Google Drive block or HTML page downloaded!"
+            cat base.nsp | head -n 20
+            exit 1
           fi
 
       - name: Build iOS App
