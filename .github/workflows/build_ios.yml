@@ -66,14 +66,11 @@ jobs:
 
       - name: Build iOS App
         run: |
-          BUILD_CMD="python3 build_app.py base.nsp -k prod.keys --update update.nsp --target ios"
-          
           if [ -d "extracted_mod" ]; then
-            BUILD_CMD="$BUILD_CMD --mod extracted_mod"
+            python3 build_app.py base.nsp -k prod.keys --update update.nsp --mod extracted_mod --target ios
+          else
+            python3 build_app.py base.nsp -k prod.keys --update update.nsp --target ios
           fi
-          
-          echo "Running build command: $BUILD_CMD"
-          eval $BUILD_CMD
 
       - name: Upload Finished IPA
         uses: actions/upload-artifact@v4
