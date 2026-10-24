@@ -54,14 +54,13 @@ jobs:
           if [ -n "${{ github.event.inputs.mod_url }}" ]; then
             echo "Downloading Mod Archive..."
             gdown "${{ github.event.inputs.mod_url }}" -O mod_input.zip
-            unzip -q mod_input.zip -d mod_raw || true
-            python3 -c "
-            import zipfile, glob, os
-            tkcl_files = glob.glob('mod_raw/*.tkcl')
-            if tkcl_files:
-                with zipfile.ZipFile(tkcl_files[0], 'r') as z:
-                    z.extractall('extracted_mod')
-            "
+            unzip -o mod_input.zip -d mod_raw || true
+            python3 -c "import zipfile, glob, os
+tkcl_files = glob.glob('mod_raw/*.tkcl')
+if tkcl_files:
+    with zipfile.ZipFile(tkcl_files[0], 'r') as z:
+        z.extractall('extracted_mod')
+"
           fi
 
       - name: Build iOS App
