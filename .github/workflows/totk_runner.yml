@@ -49,14 +49,14 @@ jobs:
           gdown "${{ inputs.keys_url }}" -O prod.keys
           
           echo "Downloading Base Game NSP..."
-          gdown --remaining-ok "${{ inputs.base_game_url }}" -O base.nsp
+          gdown "${{ inputs.base_game_url }}" -O base.nsp
           
           echo "Downloading Update NSP..."
-          gdown --remaining-ok "${{ inputs.update_url }}" -O update.nsp
+          gdown "${{ inputs.update_url }}" -O update.nsp
 
           if [ -n "${{ inputs.firmware_url }}" ]; then
             echo "Downloading Firmware Archive..."
-            gdown --remaining-ok "${{ inputs.firmware_url }}" -O firmware_input.zip
+            gdown "${{ inputs.firmware_url }}" -O firmware_input.zip
             mkdir -p firmware_dir
             unzip -o firmware_input.zip -d firmware_dir || true
           fi
