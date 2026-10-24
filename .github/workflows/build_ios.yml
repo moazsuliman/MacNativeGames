@@ -26,10 +26,9 @@ jobs:
 
       - name: Free Disk Space on macOS Runner
         run: |
-          echo "Freeing disk space..."
+          echo "Freeing space..."
           sudo rm -rf /Applications/Xcode_*.app || true
           sudo rm -rf /Library/Developer/CoreSimulator || true
-          df -h
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -43,17 +42,17 @@ jobs:
       - name: Download Files
         run: |
           echo "Downloading prod.keys..."
-          curl -L -f --retry 3 "${{ github.event.inputs.keys_url }}" -o prod.keys
+          curl -L -A "Mozilla/5.0" --retry 5 "${{ github.event.inputs.keys_url }}" -o prod.keys
           
           echo "Downloading Base Game NSP..."
-          curl -L -f --retry 3 "${{ github.event.inputs.base_game_url }}" -o base.nsp
+          curl -L -A "Mozilla/5.0" --retry 5 "${{ github.event.inputs.base_game_url }}" -o base.nsp
           
           echo "Downloading Update NSP..."
-          curl -L -f --retry 3 "${{ github.event.inputs.update_url }}" -o update.nsp
+          curl -L -A "Mozilla/5.0" --retry 5 "${{ github.event.inputs.update_url }}" -o update.nsp
           
           if [ -n "${{ github.event.inputs.mod_url }}" ]; then
             echo "Downloading Mod Archive..."
-            curl -L -f --retry 3 "${{ github.event.inputs.mod_url }}" -o mod_input.zip
+            curl -L -A "Mozilla/5.0" --retry 5 "${{ github.event.inputs.mod_url }}" -o mod_input.zip
             unzip -q mod_input.zip -d mod_raw || true
             python3 -c "
             import zipfile, glob, os
