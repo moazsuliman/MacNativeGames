@@ -1,0 +1,81 @@
+name: TOTK Builder App
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      keys_url:
+        description: 'Google Drive Link or File ID for prod.keys'
+        required: true
+      base_game_url:
+        description: 'Google Drive Link or File ID for Base Game NSP'
+        required: true
+      update_url:
+        description: 'Google Drive Link or File ID for Update NSP'
+        required: true
+      mod_url:
+        description: 'Google Drive Link or File ID for depths_of_the_kingdom_20_-_public.zip'
+        required: false
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v5
+
+      - name: Free Disk Space
+        run: |
+          echo "Freeing space..."
+          sudo rm -rf /Applications/Xcode_*.app || true
+          sudo rm -rf /Library/Developer/CoreSimulator || true
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          brew install opus libvpx xcodegen cmake ninja || true
+          pip install --upgrade gdown
+
+      - name: Download Files from Google Drive
+        run: |
+          echo "Downloading prod.keys..."
+          gdown "${{ github.event.inputs.keys_url }}" -O prod.keys || true
+          
+          echo "Downloading Base Game NSP..."
+          gdown "${{ github.event.inputs.base_game_url }}" -O base.nsp || true
+          
+          echo "Downloading Update NSP..."
+          gdown "${{ github.event.inputs.update_url }}" -O update.nsp || true
+          
+          if [ -n "${{ github.event.inputs.mod_url }}" ]; then
+            echo "Downloading Mod..."
+            gdown "${{ github.event.inputs.mod_url }}" -O mod_input.zip || true
+            unzip -o mod_input.zip -d mod_raw || true
+            python3 -c "import zipfile, glob, os
+tkcl_files = glob.glob('mod_raw/*.tkcl')
+if tkcl_files:
+    with zipfile.ZipFile(tkcl_files[0], 'r') as z:
+        z.extractall('extracted_mod')
+"
+          fi
+
+      - name: Build iOS App
+        run: |
+          if [ -d "extracted_mod" ]; then
+            python3 build_app.py base.nsp -k prod.keys --update update.nsp --mod extracted_mod --target ios
+          else
+            python3 build_app.py base.nsp -k prod.keys --update update.nsp --target ios
+          fi
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: TOTK-iOS-App
+          path: "*.ipa"
