@@ -1,30 +1,34 @@
-name: Build TOTK iOS App
+name: Build TOTK App
 
 on:
   workflow_dispatch:
     inputs:
       keys_url:
-        description: 'Google Drive Link or File ID for prod.keys'
+        description: 'Google Drive Link for prod.keys'
         required: true
+        type: string
       base_game_url:
-        description: 'Google Drive Link or File ID for Base Game NSP'
+        description: 'Google Drive Link for Base Game NSP'
         required: true
+        type: string
       update_url:
-        description: 'Google Drive Link or File ID for Update NSP'
+        description: 'Google Drive Link for Update NSP'
         required: true
+        type: string
       mod_url:
-        description: 'Google Drive Link or File ID for depths_of_the_kingdom_20_-_public.zip'
+        description: 'Google Drive Link for Mod ZIP'
         required: false
+        type: string
 
 jobs:
-  build-ios:
+  build:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Free Disk Space
+      - name: Free disk space
         run: |
           sudo rm -rf /Applications/Xcode_*.app || true
           sudo rm -rf /Library/Developer/CoreSimulator || true
@@ -34,12 +38,12 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           brew install opus libvpx xcodegen cmake ninja || true
           pip install --upgrade gdown
 
-      - name: Download Files from Google Drive
+      - name: Download Google Drive files
         run: |
           echo "Downloading prod.keys..."
           gdown "${{ inputs.keys_url }}" -O prod.keys
@@ -62,7 +66,7 @@ if tkcl_files:
 "
           fi
 
-      - name: Build iOS App
+      - name: Build iOS Application
         run: |
           if [ -d "extracted_mod" ]; then
             python3 build_app.py base.nsp -k prod.keys --update update.nsp --mod extracted_mod --target ios
@@ -70,7 +74,7 @@ if tkcl_files:
             python3 build_app.py base.nsp -k prod.keys --update update.nsp --target ios
           fi
 
-      - name: Upload IPA
+      - name: Upload Finished IPA
         uses: actions/upload-artifact@v4
         with:
           name: TOTK-iOS-App
