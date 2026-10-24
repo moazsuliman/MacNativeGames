@@ -29,7 +29,7 @@ jobs:
 
       - name: Free Disk Space
         run: |
-          echo "Freeing space..."
+          echo "Freeing disk space..."
           sudo rm -rf /Applications/Xcode_*.app || true
           sudo rm -rf /Library/Developer/CoreSimulator || true
 
@@ -51,7 +51,7 @@ jobs:
           MOD="${{ github.event.inputs.mod_url }}"
 
           if [ -z "$KEYS" ]; then
-            echo "No manual inputs provided. Skipping automatic push run."
+            echo "No manual inputs provided on push commit. Skipping download step."
             exit 0
           fi
 
@@ -79,7 +79,7 @@ if tkcl_files:
       - name: Build iOS App
         run: |
           if [ ! -f "base.nsp" ]; then
-            echo "No base game downloaded. Skipping build."
+            echo "No base game present. Skipping build."
             exit 0
           fi
 
