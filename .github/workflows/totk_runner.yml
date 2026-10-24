@@ -1,75 +1,70 @@
-name: Build TOTK App
+name: Build TOTK iOS App (Google Drive Inputs)
 
 on:
   workflow_dispatch:
     inputs:
       keys_url:
-        description: 'Google Drive Link for prod.keys'
+        description: 'Google Drive Link or File ID for prod.keys'
         required: true
-        type: string
       base_game_url:
-        description: 'Google Drive Link for Base Game NSP'
+        description: 'Google Drive Link or File ID for Base Game NSP'
         required: true
-        type: string
       update_url:
-        description: 'Google Drive Link for Update NSP'
+        description: 'Google Drive Link or File ID for Update NSP'
         required: true
-        type: string
       mod_url:
-        description: 'Google Drive Link for Mod ZIP'
+        description: 'Google Drive Link or File ID for depths_of_the_kingdom_20_-_public.zip'
         required: false
-        type: string
 
 jobs:
-  build:
+  build-ios:
     runs-on: macos-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v5
 
-      - name: Maximize macOS Runner Disk Space
+      - name: Free Disk Space on macOS Runner
         run: |
-          echo "=== Freeing Disk Space ==="
-          df -h
-          sudo rm -rf /Applications/Xcode*.app || true
-          sudo rm -rf /Library/Developer/CommandLineTools || true
-          sudo rm -rf /Users/runner/Library/Android || true
-          sudo rm -rf /opt/homebrew || true
-          echo "=== Disk Space After Cleanup ==="
-          df -h
+          echo "Freeing space..."
+          sudo rm -rf /Applications/Xcode_*.app || true
+          sudo rm -rf /Library/Developer/CoreSimulator || true
 
-      - name: Reinstall Minimal Homebrew & Python
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Install macOS Dependencies & gdown
         run: |
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" || true
-          echo "/opt/homebrew/bin" >> $GITHUB_PATH
-          brew install opus libvpx xcodegen cmake ninja python@3.11 || true
-          pip3 install --upgrade gdown
+          brew install opus libvpx xcodegen cmake ninja || true
+          pip install --upgrade gdown
 
-      - name: Download Google Drive files
+      - name: Download Files from Google Drive
         run: |
           echo "Downloading prod.keys..."
-          gdown "${{ inputs.keys_url }}" -O prod.keys
+          gdown "${{ github.event.inputs.keys_url }}" -O prod.keys
           
           echo "Downloading Base Game NSP..."
-          gdown "${{ inputs.base_game_url }}" -O base.nsp
+          gdown "${{ github.event.inputs.base_game_url }}" -O base.nsp
           
           echo "Downloading Update NSP..."
-          gdown "${{ inputs.update_url }}" -O update.nsp
+          gdown "${{ github.event.inputs.update_url }}" -O update.nsp
           
-          if [ -n "${{ inputs.mod_url }}" ]; then
-            echo "Downloading Mod..."
-            gdown "${{ inputs.mod_url }}" -O mod_input.zip
-            unzip -o mod_input.zip -d mod_raw || true
-            python3 -c "import zipfile, glob, os
-tkcl_files = glob.glob('mod_raw/*.tkcl')
-if tkcl_files:
-    with zipfile.ZipFile(tkcl_files[0], 'r') as z:
-        z.extractall('extracted_mod')
-"
+          if [ -n "${{ github.event.inputs.mod_url }}" ]; then
+            echo "Downloading Mod Archive..."
+            gdown "${{ github.event.inputs.mod_url }}" -O mod_input.zip
+            unzip -q mod_input.zip -d mod_raw || true
+            python3 -c "
+            import zipfile, glob, os
+            tkcl_files = glob.glob('mod_raw/*.tkcl')
+            if tkcl_files:
+                with zipfile.ZipFile(tkcl_files[0], 'r') as z:
+                    z.extractall('extracted_mod')
+            "
           fi
 
-      - name: Build iOS Application
+      - name: Build iOS App
         run: |
           if [ -d "extracted_mod" ]; then
             python3 build_app.py base.nsp -k prod.keys --update update.nsp --mod extracted_mod --target ios
