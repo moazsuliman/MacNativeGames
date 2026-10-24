@@ -1,0 +1,69 @@
+name: Build TOTK iOS App (NSP + Update + Mod)
+
+on:
+  workflow_dispatch:
+    inputs:
+      keys_url:
+        description: 'Direct Link to prod.keys'
+        required: true
+      base_game_url:
+        description: 'Direct Link to Base Game NSP'
+        required: true
+      update_url:
+        description: 'Direct Link to Update NSP'
+        required: true
+      mod_url:
+        description: 'Direct Link to depths_of_the_kingdom_20_-_public.zip'
+        required: false
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install macOS Dependencies
+        run: |
+          brew install opus libvpx xcodegen cmake ninja
+
+      - name: Download Keys, Game, Update, and Mod
+        run: |
+          curl -L "${{ github.event.inputs.keys_url }}" -o prod.keys
+          curl -L "${{ github.event.inputs.base_game_url }}" -o base.nsp
+          curl -L "${{ github.event.inputs.update_url }}" -o update.nsp
+          
+          if [ -n "${{ github.event.inputs.mod_url }}" ]; then
+            curl -L "${{ github.event.inputs.mod_url }}" -o mod_input.zip
+            unzip mod_input.zip -d mod_raw
+            python3 -c "
+            import zipfile, glob, os
+            tkcl_files = glob.glob('mod_raw/*.tkcl')
+            if tkcl_files:
+                with zipfile.ZipFile(tkcl_files[0], 'r') as z:
+                    z.extractall('extracted_mod')
+            "
+          fi
+
+      - name: Build iOS App
+        run: |
+          BUILD_CMD="python3 build_app.py base.nsp -k prod.keys --update update.nsp --target ios"
+          
+          if [ -d "extracted_mod" ]; then
+            BUILD_CMD="$BUILD_CMD --mod extracted_mod"
+          fi
+          
+          echo "Running build command: $BUILD_CMD"
+          eval $BUILD_CMD
+
+      - name: Upload Finished IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: TOTK-iOS-App
+          path: "*.ipa"
