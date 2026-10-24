@@ -45,39 +45,53 @@ jobs:
 
       - name: Download Files from Google Drive
         run: |
-          echo "Downloading prod.keys..."
-          gdown "${{ inputs.keys_url }}" -O prod.keys
-          
-          echo "Downloading Base Game NSP..."
-          gdown "${{ inputs.base_game_url }}" -O base.nsp
-          
-          echo "Downloading Update NSP..."
-          gdown "${{ inputs.update_url }}" -O update.nsp
+          python3 -c "
+          import gdown
 
-          if [ -n "${{ inputs.firmware_url }}" ]; then
-            echo "Downloading Firmware Archive..."
-            gdown "${{ inputs.firmware_url }}" -O firmware_input.zip
+          keys_input = '${{ inputs.keys_url }}'
+          base_input = '${{ inputs.base_game_url }}'
+          update_input = '${{ inputs.update_url }}'
+          firmware_input = '${{ inputs.firmware_url }}'
+          mod_input = '${{ inputs.mod_url }}'
+
+          print('Downloading prod.keys...')
+          gdown.download(url=keys_input, output='prod.keys', quiet=False, fuzzy=True)
+
+          print('Downloading Base Game NSP...')
+          gdown.download(url=base_input, output='base.nsp', quiet=False, fuzzy=True)
+
+          print('Downloading Update NSP...')
+          gdown.download(url=update_input, output='update.nsp', quiet=False, fuzzy=True)
+
+          if firmware_input:
+              print('Downloading Firmware Archive...')
+              gdown.download(url=firmware_input, output='firmware_input.zip', quiet=False, fuzzy=True)
+
+          if mod_input:
+              print('Downloading Mod Archive...')
+              gdown.download(url=mod_input, output='mod_input.zip', quiet=False, fuzzy=True)
+          "
+
+          if [ -f "firmware_input.zip" ]; then
             mkdir -p firmware_dir
             unzip -o firmware_input.zip -d firmware_dir || true
           fi
-          
-          if [ -n "${{ inputs.mod_url }}" ]; then
-            echo "Downloading Mod Archive..."
-            gdown "${{ inputs.mod_url }}" -O mod_input.zip
+
+          if [ -f "mod_input.zip" ]; then
             unzip -q mod_input.zip -d mod_raw || true
             mkdir -p extracted_mod
             find mod_raw -name "*.tkcl" -exec unzip -o {} -d extracted_mod/ \; || true
           fi
 
-      - name: Verify Base Game NSP
+      - name: Verify Base Game NSP Size
         run: |
-          echo "Checking base.nsp size..."
+          echo "Checking downloaded NSP file size..."
           ls -lh base.nsp
           SIZE=$(wc -c < base.nsp)
           if [ "$SIZE" -lt 1000000000 ]; then
             echo "ERROR: base.nsp is smaller than 1 GB ($SIZE bytes)."
-            echo "Google Drive served an HTML download warning page instead of the NSP."
-            echo "First 20 lines of downloaded file:"
+            echo "Google Drive link permissions might be set to restricted, or the file ID is invalid."
+            echo "First 20 lines of downloaded base.nsp:"
             head -n 20 base.nsp
             exit 1
           fi
